@@ -1,16 +1,16 @@
 # main.py
 from modelo import ModeloPrincipal
-from vista import VistaPrincipal
+from vista.vista_principal import VistaPrincipal
 from controlador import ControladorPrincipal
 
 def main():
     # Inicializar el Modelo
     modelo = ModeloPrincipal()
     
-    # Inicializar la Vista
+    # Inicializar la Vista Principal
     vista = VistaPrincipal()
     
-    # Inicializar el Controlador y conectar Modelo y Vista
+    # Inicializar el Controlador Principal
     controlador = ControladorPrincipal(modelo, vista)
     
     # Arrancar la aplicación

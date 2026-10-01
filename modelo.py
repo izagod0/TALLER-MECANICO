@@ -3,7 +3,7 @@ import mysql.connector
 from tkinter import messagebox
 
 ENTIDADES = {
-    "Usuarios": ["txtNombre", "txtAp", "txtAm", "txtTelefono", "txtDireccion"],
+    "Usuarios": ["txtNombre", "txtUsername", "txtContrasena", "txtTipo"],
     "Clientes": ["txtNombre", "txtAp", "txtAm"],
     "Vehiculos": ["txtMatricula", "txtModelo", "txtMarca"],
     "Reparaciones": ["txtFechaEntrada", "txtFechaSalida", "txtFalla", "txtnumero_piezas"],
@@ -30,7 +30,7 @@ class ModeloPrincipal:
         if not self.conexion: return
         try:
             cursor = self.conexion.cursor()
-            columnas = ", ".join([k.replace("txt", "") for k in datos.keys()])
+            columnas = ", ".join([k.replace("txt", "").replace("cmb", "") for k in datos.keys()])
             placeholders = ", ".join(["%s"] * len(datos))
             
             sql = f"INSERT INTO {entidad} ({columnas}) VALUES ({placeholders})"
@@ -41,24 +41,61 @@ class ModeloPrincipal:
         except Exception as e:
             messagebox.showerror("Error SQL", f"Error al insertar:\n{e}")
 
+    def actualizar_datos(self, entidad, id_registro, datos):
+        """Actualiza un registro existente mediante su ID."""
+        if not self.conexion: return
+        try:
+            cursor = self.conexion.cursor()
+            set_clauses = []
+            valores = []
+            
+            for k, v in datos.items():
+                col = k.replace("txt", "").replace("cmb", "")
+                if col.lower() != "id":
+                    set_clauses.append(f"{col} = %s")
+                    valores.append(v)
+            
+            set_str = ", ".join(set_clauses)
+            valores.append(id_registro)
+            
+            sql = f"UPDATE {entidad} SET {set_str} WHERE id = %s"
+            cursor.execute(sql, tuple(valores))
+            self.conexion.commit()
+            cursor.close()
+            messagebox.showinfo("Éxito", f"Registro actualizado en {entidad}.")
+        except Exception as e:
+            messagebox.showerror("Error SQL", f"Error al actualizar:\n{e}")
+
+    def eliminar_datos(self, entidad, id_registro):
+        """Elimina un registro mediante su ID."""
+        if not self.conexion: return
+        try:
+            cursor = self.conexion.cursor()
+            sql = f"DELETE FROM {entidad} WHERE id = %s"
+            cursor.execute(sql, (id_registro,))
+            self.conexion.commit()
+            cursor.close()
+            messagebox.showinfo("Éxito", f"Registro eliminado de {entidad}.")
+        except Exception as e:
+            messagebox.showerror("Error SQL", f"Error al eliminar:\n{e}")
+
     def buscar_datos(self, entidad, termino=""):
-        """Busca coincidencias en cualquier columna de la tabla y devuelve los registros."""
         if not self.conexion: return []
         try:
             cursor = self.conexion.cursor()
-            columnas = [k.replace("txt", "") for k in self.obtener_campos(entidad)]
-            str_cols = ", ".join(columnas)
+            campos = self.obtener_campos(entidad)
+            columnas = [k.replace("txt", "").replace("cmb", "") for k in campos]
+            
+            tiene_id = any(col.lower() == "id" for col in columnas)
+            cols_sql = ", ".join(columnas) if tiene_id else "id, " + ", ".join(columnas)
             
             if termino:
-                # Crea la condición OR para buscar en todas las columnas (ej: Nombre LIKE %isa% OR Ap LIKE %isa%)
                 condiciones = " OR ".join([f"{col} LIKE %s" for col in columnas])
-                sql = f"SELECT id, {str_cols} FROM {entidad} WHERE {condiciones}"
-                # Multiplicamos el término de búsqueda por la cantidad de columnas
+                sql = f"SELECT {cols_sql} FROM {entidad} WHERE {condiciones}"
                 valores = tuple([f"%{termino}%"] * len(columnas))
                 cursor.execute(sql, valores)
             else:
-                # Si está vacío, trae todo
-                sql = f"SELECT id, {str_cols} FROM {entidad}"
+                sql = f"SELECT {cols_sql} FROM {entidad}"
                 cursor.execute(sql)
                 
             resultados = cursor.fetchall()
