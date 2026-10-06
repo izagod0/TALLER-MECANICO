@@ -1,14 +1,19 @@
-# modelo.py
 import mysql.connector
 from tkinter import messagebox
 
+# IMPORTANTE: Verifica en tu base de datos MySQL cómo se llama exactamente la columna.
+# Si en tu tabla Vehiculos la columna se llama "cliente_id", déjalo así.
+# Si se llama "id_cliente", cámbialo a "cmbid_cliente".
+# Si se llama "idcliente", cámbialo a "cmbidcliente".
 ENTIDADES = {
     "Usuarios": ["txtNombre", "txtUsername", "txtContrasena", "txtTipo"],
     "Clientes": ["txtNombre", "txtAp", "txtAm"],
-    "Vehiculos": ["txtMatricula", "txtModelo", "txtMarca"],
+    # AQUI: "cmbcliente_id" guardará en la columna "cliente_id" que acabas de crear
+    "Vehiculos": ["txtMatricula", "cmbcliente_id", "txtMarca", "txtModelo", "txtColor"],
     "Reparaciones": ["txtFechaEntrada", "txtFechaSalida", "txtFalla", "txtnumero_piezas"],
     "Piezas": ["txtDescripcion", "txtStock"]
 }
+
 
 class ModeloPrincipal:
     def __init__(self):
@@ -30,6 +35,7 @@ class ModeloPrincipal:
         if not self.conexion: return
         try:
             cursor = self.conexion.cursor()
+            # Limpiamos los prefijos txt y cmb para obtener el nombre real de la columna
             columnas = ", ".join([k.replace("txt", "").replace("cmb", "") for k in datos.keys()])
             placeholders = ", ".join(["%s"] * len(datos))
             
@@ -42,7 +48,6 @@ class ModeloPrincipal:
             messagebox.showerror("Error SQL", f"Error al insertar:\n{e}")
 
     def actualizar_datos(self, entidad, id_registro, datos):
-        """Actualiza un registro existente mediante su ID."""
         if not self.conexion: return
         try:
             cursor = self.conexion.cursor()
@@ -67,7 +72,6 @@ class ModeloPrincipal:
             messagebox.showerror("Error SQL", f"Error al actualizar:\n{e}")
 
     def eliminar_datos(self, entidad, id_registro):
-        """Elimina un registro mediante su ID."""
         if not self.conexion: return
         try:
             cursor = self.conexion.cursor()
@@ -103,4 +107,29 @@ class ModeloPrincipal:
             return resultados
         except Exception as e:
             print(f"Error de búsqueda: {e}")
+            return []
+
+    def verificar_login(self, username, password):
+        if not self.conexion: return False
+        try:
+            cursor = self.conexion.cursor()
+            sql = "SELECT id FROM Usuarios WHERE Username = %s AND Contrasena = %s"
+            cursor.execute(sql, (username, password))
+            resultado = cursor.fetchone()
+            cursor.close()
+            return resultado is not None
+        except Exception as e:
+            print(f"Error en login: {e}")
+            return False
+
+    def obtener_lista_clientes(self):
+        if not self.conexion: return []
+        try:
+            cursor = self.conexion.cursor()
+            cursor.execute("SELECT id, Nombre, Ap, Am FROM Clientes")
+            resultados = cursor.fetchall()
+            cursor.close()
+            return [f"{r[0]} - {r[1]} {r[2]} {r[3]}" for r in resultados]
+        except Exception as e:
+            print(f"Error obteniendo clientes: {e}")
             return []

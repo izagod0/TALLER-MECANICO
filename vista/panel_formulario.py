@@ -1,4 +1,3 @@
-# vista/panel_formulario.py
 import tkinter as tk
 from tkinter import ttk
 
@@ -12,9 +11,14 @@ class PanelFormulario(tk.Frame):
         lbl_titulo = tk.Label(self, text=f"Módulo: {titulo}", bg="white", font=("Arial", 16, "bold"))
         lbl_titulo.grid(row=0, column=0, columnspan=2, pady=(0, 10))
         
-        # Generar campos del formulario
         for i, nombre_campo in enumerate(campos):
             nombre_limpio = nombre_campo.replace("txt", "").replace("cmb", "")
+            
+            # Asegura que en pantalla siempre diga "Cliente" aunque en la BD se llame diferente
+            # Aquí cubrimos las variantes más comunes
+            if nombre_limpio.lower() in ["id_cliente", "cliente_id", "idcliente", "cliente"]:
+                nombre_limpio = "Cliente"
+                
             lbl = tk.Label(self, text=nombre_limpio + ":", bg="white", font=("Arial", 10))
             lbl.grid(row=i+1, column=0, sticky="e", padx=5, pady=2)
             
@@ -26,12 +30,15 @@ class PanelFormulario(tk.Frame):
                 ent = tk.Entry(self, width=30, show="*")
                 ent.grid(row=i+1, column=1, sticky="w", padx=5, pady=2)
                 self.entradas[nombre_campo] = ent
+            elif "cmb" in nombre_campo:
+                ent = ttk.Combobox(self, width=28, state="readonly")
+                ent.grid(row=i+1, column=1, sticky="w", padx=5, pady=2)
+                self.entradas[nombre_campo] = ent
             else:
                 ent = tk.Entry(self, width=30)
                 ent.grid(row=i+1, column=1, sticky="w", padx=5, pady=2)
                 self.entradas[nombre_campo] = ent
             
-        # Botones de acción
         frame_botones = tk.Frame(self, bg="white")
         frame_botones.grid(row=len(campos)+1, column=0, columnspan=2, pady=15)
         
@@ -49,7 +56,6 @@ class PanelFormulario(tk.Frame):
         self.btnRemover.grid(row=0, column=4, padx=5)
         self.btnBuscar.grid(row=0, column=5, padx=5)
         
-        # Zona de búsqueda y tabla
         self.frame_busqueda = tk.Frame(self, bg="white")
         
         frame_bar = tk.Frame(self.frame_busqueda, bg="white")

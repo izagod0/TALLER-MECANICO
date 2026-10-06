@@ -1,4 +1,3 @@
-# controlador.py
 from vista.panel_formulario import PanelFormulario
 import tkinter as tk
 from tkinter import messagebox
@@ -7,9 +6,24 @@ class ControladorPrincipal:
     def __init__(self, modelo, vista):
         self.modelo = modelo
         self.vista = vista
-        self._vincular_eventos()
+        self.mostrar_login()
+
+    def mostrar_login(self):
+        self.vista.limpiar_contenido()
+        self.vista.ocultar_menu()
+        self.vista.crear_panel_login(self.iniciar_sesion)
+
+    def iniciar_sesion(self, username, password):
+        if self.modelo.verificar_login(username, password):
+            self.vista.mostrar_menu()
+            self._vincular_eventos()
+            self.vista.limpiar_contenido()
+            tk.Label(self.vista.frame_contenido, text="¡Sesión iniciada con éxito!", font=("Arial", 20), bg="white").pack(pady=50)
+        else:
+            messagebox.showerror("Error", "Usuario o contraseña incorrectos")
 
     def _vincular_eventos(self):
+        self.vista.menu_file.delete(0, tk.END)
         self.vista.menu_file.add_command(label="Usuarios", command=lambda: self.mostrar_modulo("Usuarios"))
         self.vista.menu_file.add_command(label="Clientes", command=lambda: self.mostrar_modulo("Clientes"))
         self.vista.menu_file.add_command(label="Vehículos", command=lambda: self.mostrar_modulo("Vehiculos"))
@@ -24,6 +38,14 @@ class ControladorPrincipal:
         
         controlador_form = ControladorFormulario(self.modelo, entidad)
         panel = PanelFormulario(self.vista.frame_contenido, entidad, campos, controlador_form)
+        
+        if entidad == "Vehiculos":
+            for campo in campos:
+                # Si el campo es un combobox (contiene cmb), cargamos los clientes
+                if "cmb" in campo: 
+                    lista_clientes = self.modelo.obtener_lista_clientes()
+                    panel.entradas[campo].config(values=lista_clientes)
+
         controlador_form.set_panel(panel)
         panel.pack(fill=tk.BOTH, expand=True)
 
@@ -38,7 +60,6 @@ class ControladorFormulario:
         self.panel = panel
 
     def cargar_registro_seleccionado(self):
-        """Carga los datos de la fila seleccionada de la tabla en las cajas de texto."""
         seleccion = self.panel.tabla.selection()
         if not seleccion:
             messagebox.showwarning("Atención", "Por favor, selecciona una fila de la tabla primero.")
@@ -59,7 +80,7 @@ class ControladorFormulario:
             val = valores[val_idx] if val_idx < len(valores) else ""
             entrada = self.panel.entradas[nombre_campo]
             
-            if hasattr(entrada, "set"):  # Combobox
+            if hasattr(entrada, "set"):
                 entrada.config(state="normal")
                 entrada.set(val)
             else:
@@ -79,7 +100,11 @@ class ControladorFormulario:
         elif estado == "SALVAR":
             datos_guardados = {}
             for nombre_campo, caja_texto in self.panel.entradas.items():
-                datos_guardados[nombre_campo] = caja_texto.get()
+                val = caja_texto.get()
+                # Si es un combobox y tiene el formato "ID - Nombre", extraemos solo el ID
+                if "cmb" in nombre_campo and " - " in str(val):
+                    val = str(val).split(" - ")[0]
+                datos_guardados[nombre_campo] = val
 
             if self.id_seleccionado:
                 self.modelo.actualizar_datos(self.entidad, self.id_seleccionado, datos_guardados)
